@@ -1,26 +1,55 @@
 import MovieCard from "../components/MovieCard"
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { searchMovies, getPopularMovies } from "../services/api";
+import '../css/Home.css'
 
 
 
 function Home(){
     const [searchQuery, setSearchQuery] = useState("");
         //[name of the state, function to update the state]
+    const [movies, setMovies] = useState([])
+//common practice when loading something from API, SET UP TWO PIECES OF STATE: A) TO STORE THE "LOADING STATE", B) TO STORE ANY POTENTIAL ERROR
 
+    const [error, setError] = useState(null)
+    const [loading, setloading] = useState(true)
+  
+    useEffect(() => {
+        const loadPopularMovies = async () => {
+            try {
+                const popularMovies = await getPopularMovies()
+                setMovies(popularMovies)
+            } catch (err) {
+                console.log(err)
+                setError("Failed to load movies...")
+            }
+            finally {
+                setloading(false)
+            }
+        }
+        loadPopularMovies()
+    }, [])   //[] --> dependency array- whatever we put inside it, check it after every single rerender and if its changed, we will run the use effect. if we have nothing inside, we will just run one time
 
-
-    const movies =[
-        {id:1, title: 'The Night Agent', release_date: "2020"},
-        {id:2, title: 'Recruit', release_date: "2021"},
-        {id:3, title: 'Money Heist', release_date: "2022"},
-        {id:4, title: 'Stranger Things', release_date: "2023"},
-    ];
-      
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault()
-        alert(searchQuery)
+        if (!searchQuery.trim()) return
+        // if (loading) return
 
-    }
+        setloading(true)
+        try {
+            const searchResults = await searchMovies(searchQuery)
+            setMovies(searchResults)
+            setError(null)
+
+        } catch (err) {
+            console.log(err)
+            setError("Failed to search movies..")
+
+        } finally {
+            setloading(false)
+
+        }
+    };
 
      
     return (
@@ -30,12 +59,17 @@ function Home(){
             <button type="submit" className="search-button">Search</button>
         </form>
 
+        {error && <div className="error-message">{error}</div>}
 
-        <div className="movies-grid">
-            {movies.map((movie) => (
-                movie.title.toLowerCase().startsWith(searchQuery) && <MovieCard movie={movie} key={movie.id} />
+        {loading ? (
+            <div className="loading">Loading...</div> 
+        ) : (
+            <div className="movies-grid">
+                {movies.map((movie) => (
+                    <MovieCard movie={movie} key={movie.id} />
             ))}
-        </div>
+        </div>        
+    )}          
     </div>
     );
 }
